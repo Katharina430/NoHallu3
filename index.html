@@ -377,16 +377,26 @@
             const year = yearMatch ? yearMatch[1] : null;
             
             // 저자명 추출 (더 정교한 패턴)
-            const authorMatch = cleanCitation.match(/^([가-힣A-Za-z\s,&]+)(?=\s*\()/);
+            const authorMatch = cleanCitation.match(/^([가-힣A-Za-z\s,&·]+)(?=\s*\()/);
             const author = authorMatch ? authorMatch[1].trim() : null;
             
             // 제목 추출 (다양한 형식 지원)
             let title = null;
             const titlePatterns = [
+                // 『』, 「」, "", "" 형식
                 /[「『""]([^」』""]+)[」』""]/,
-                /\)\.\s*([^.]+)\.\s*(?:서울|부산|대구|인천|광주|대전|울산|출판)/,
+                // 연도 다음에 오는 제목 (마침표로 구분)
+                /\d{4}\)\.\s*([^.]+?)(?:\.|,|\s*[가-힣]+:|$)/,
+                // "로 시작하는 제목
                 /\)\.\s*"([^"]+)"/,
-                /\)\.\s*([^.]+)\.\s*\d+권/
+                // 단행본 형식 (출판사 앞의 텍스트)
+                /\)\.\s*([^.]+?)\.\s*(?:서울|부산|대구|인천|광주|대전|울산|경기|강원|충북|충남|전북|전남|경북|경남|제주|출판|:)/,
+                // 학술지 논문 형식
+                /\)\.\s*([^.]+?)[.,]\s*[『「]/,
+                // 영어 제목
+                /\)\.\s*([A-Z][^.]+?)(?:\.|,)/,
+                // 기타 일반적인 경우
+                /\d{4}\)[.,]?\s*([^.,]+?)(?:[.,]|$)/
             ];
             
             for (const pattern of titlePatterns) {
@@ -397,12 +407,29 @@
                 }
             }
             
+            // 제목을 못 찾은 경우, 전체 텍스트에서 핵심어 추출
+            let searchQuery = '';
+            if (title) {
+                searchQuery = `${title} ${author || ''} ${year || ''}`.trim();
+            } else if (author && year) {
+                // 제목이 없어도 저자와 연도로 검색
+                searchQuery = `${author} ${year}`;
+            } else {
+                // 최후의 수단: 괄호, 마침표 등을 제거한 핵심 텍스트
+                searchQuery = cleanCitation
+                    .replace(/\([^)]*\)/g, ' ') // 괄호 내용 제거
+                    .replace(/[『』「」""]/g, ' ') // 인용부호 제거
+                    .replace(/\s+/g, ' ') // 다중 공백 정리
+                    .substring(0, 100) // 너무 길면 자르기
+                    .trim();
+            }
+            
             return { 
                 author, 
                 year, 
                 title, 
                 original: cleanCitation,
-                searchQuery: `${author || ''} ${title || ''} ${year || ''}`.trim()
+                searchQuery: searchQuery
             };
         }
         
@@ -447,10 +474,11 @@
             // 연도 검사
             if (citationInfo.year) {
                 const year = parseInt(citationInfo.year);
-                if (year > 2024) {
+                const currentYear = new Date().getFullYear();
+                if (year > currentYear) {
                     suspicionLevel += 50;
                     reasons.push("미래 날짜");
-                } else if (year === 2023 || year === 2024) {
+                } else if (year === currentYear || year === currentYear - 1) {
                     suspicionLevel += 10;
                     reasons.push("최신 출판물 (확인 필요)");
                 }
@@ -579,6 +607,9 @@
                             ⚠️ ${result.reasons.join(', ')}
                         </div>
                     ` : ''}
+                    <div style="color: #888; margin: 8px 0; font-size: 13px;">
+                        검색어: "${result.searchQuery}"
+                    </div>
                     <div style="margin-top: 12px;">
                         <a href="${googleSearchUrl}" target="_blank" class="search-link">
                             🔍 Google에서 검색
