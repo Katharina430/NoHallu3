@@ -273,6 +273,17 @@
         @media (max-width: 600px) {
             .container {
                 padding: 25px;
+            // 정부기관 최신 자료 검사
+            if (citationInfo.year && (citationInfo.original.includes('통계청') || 
+                citationInfo.original.includes('보건복지부') || 
+                citationInfo.original.includes('교육부') ||
+                citationInfo.original.includes('고용노동부'))) {
+                const year = parseInt(citationInfo.year);
+                const currentYear = new Date().getFullYear();
+                if (year === currentYear) {
+                    suspicionLevel += 25;
+                    reasons.push("정부기관 최신 자료 (확인 필요)");
+                }
             }
             
             .header h1 {
@@ -298,7 +309,7 @@
             <textarea 
                 class="citation-input" 
                 id="citationInput"
-                placeholder="예시:&#10;김철수(2023). 한국 현대소설의 이해. 서울: 문학사상사.&#10;이영희(2022). &quot;AI 시대의 문학교육&quot;. 『국어교육연구』, 45, 23-45.&#10;박민수(2021). 디지털 시대의 인문학 연구. 서울: 미래출판사.&#10;...&#10;&#10;한 줄에 하나씩, 또는 전체를 그대로 붙여넣으세요."
+                placeholder="예시:&#10;1. 김수현. (2023). 독거노인의 사회적 고립감과 우울이 삶의 만족도에 미치는 영향. 노인복지연구, 78(1), 123-145.&#10;2. 송혜교. (2023). AI 돌봄 로봇의 윤리적 쟁점과 정책적 함의. AI와 사회, 4(1), 78-95.&#10;...&#10;&#10;한 줄에 하나씩, 또는 전체를 그대로 붙여넣으세요."
             ></textarea>
         </div>
         
@@ -347,7 +358,12 @@
                 /4차 산업혁명/,
                 /디지털 시대의/,
                 /AI.*인문학/,
-                /빅데이터와.*/
+                /빅데이터와.*/,
+                /사회적 고립감과 우울/,
+                /삶의 만족도에 미치는 영향/,
+                /윤리적 쟁점과 정책적 함의/,
+                /현황과 발전 방향/,
+                /미래사회.*연구/
             ],
             publishers: [
                 /미래출판사/,
@@ -360,12 +376,41 @@
                 /AI.*연구/,
                 /디지털.*학회지/,
                 /미래.*연구/,
-                /혁신.*저널/
+                /혁신.*저널/,
+                /AI와 사회/,
+                /빅데이터.*저널/,
+                /4차산업혁명.*연구/
             ],
             pageNumbers: [
                 /pp\. 1-100/,
                 /100-200/,
-                /1-50$/
+                /1-50$/,
+                /123-145/,
+                /78-95/,
+                /45-67/,
+                /101-125/,
+                /51-75/,
+                /1-25$/,
+                /\b\d{2,3}-\d{2,3}\b/ // 두세자리 숫자 범위
+            ],
+            // 유명인 이름 패턴 추가
+            celebrityNames: [
+                /김수현/,
+                /송혜교/,
+                /이병헌/,
+                /전지현/,
+                /박보검/,
+                /송중기/,
+                /한지민/,
+                /김태희/,
+                /현빈/,
+                /손예진/,
+                /이민호/,
+                /박신혜/,
+                /공유/,
+                /김고은/,
+                /이정재/,
+                /정우성/
             ]
         };
         
@@ -437,6 +482,16 @@
             let suspicionLevel = 0;
             let reasons = [];
             
+            // 유명인 이름 검사 (저자명에)
+            if (citationInfo.author) {
+                suspiciousPatterns.celebrityNames.forEach(pattern => {
+                    if (pattern.test(citationInfo.author)) {
+                        suspicionLevel += 40;
+                        reasons.push("유명인 이름 사용 (의심)");
+                    }
+                });
+            }
+            
             // 제목 패턴 검사
             if (citationInfo.title) {
                 suspiciousPatterns.titles.forEach(pattern => {
@@ -475,12 +530,22 @@
             if (citationInfo.year) {
                 const year = parseInt(citationInfo.year);
                 const currentYear = new Date().getFullYear();
-                if (year > currentYear) {
+                const currentMonth = new Date().getMonth() + 1;
+                
+                // 현재 연도의 후반기 자료는 의심
+                if (year === currentYear && currentMonth < 10) {
+                    suspicionLevel += 15;
+                    reasons.push(`${currentYear}년 최신 자료 (확인 필요)`);
+                }
+                // 미래 자료
+                else if (year > currentYear) {
                     suspicionLevel += 50;
                     reasons.push("미래 날짜");
-                } else if (year === currentYear || year === currentYear - 1) {
+                }
+                // 작년 후반기 자료도 체크
+                else if (year === currentYear - 1 && currentMonth < 6) {
                     suspicionLevel += 10;
-                    reasons.push("최신 출판물 (확인 필요)");
+                    reasons.push("최근 출판물 (확인 필요)");
                 }
             }
             
@@ -492,6 +557,34 @@
                 } else if (citationInfo.title.length > 50) {
                     suspicionLevel += 10;
                     reasons.push("너무 긴 제목");
+                }
+            }
+            
+            // 특정 키워드 조합 검사
+            const suspiciousKeywordCombos = [
+                /인공지능.*돌봄/,
+                /AI.*윤리/,
+                /미래사회.*예측/,
+                /4차.*혁명.*정책/
+            ];
+            
+            suspiciousKeywordCombos.forEach(pattern => {
+                if (pattern.test(citationInfo.original)) {
+                    suspicionLevel += 20;
+                    reasons.push("의심스러운 키워드 조합");
+                }
+            });
+            
+            // 정부기관 최신 자료 검사
+            if (citationInfo.year && (citationInfo.original.includes('통계청') || 
+                citationInfo.original.includes('보건복지부') || 
+                citationInfo.original.includes('교육부') ||
+                citationInfo.original.includes('고용노동부'))) {
+                const year = parseInt(citationInfo.year);
+                const currentYear = new Date().getFullYear();
+                if (year === currentYear || year > currentYear) {
+                    suspicionLevel += 25;
+                    reasons.push("정부기관 최신 자료 (확인 필요)");
                 }
             }
             
@@ -632,11 +725,12 @@
         
         // 예시 데이터 추가 기능
         function loadExample() {
-            const exampleCitations = `1. 김철수(2023). 한국 현대소설의 이해. 서울: 문학사상사.
-2. 이영희(2022). "AI 시대의 문학교육". 『국어교육연구』, 45, 23-45.
-3. 박민수(2025). 디지털 시대의 인문학 연구. 서울: 미래출판사.
-4. 정수진(2023). "4차 산업혁명과 한국문학의 미래". 『AI문학연구』, 12(3), pp. 100-200.
-5. 최동훈(2021). 『빅데이터와 문학 비평』. 서울: 혁신문화사.`;
+            const exampleCitations = `1. 김수현. (2023). 독거노인의 사회적 고립감과 우울이 삶의 만족도에 미치는 영향. 노인복지연구, 78(1), 123-145.
+2. 보건복지부. (2023). 2023년도 노인실태조사 (또는 무연고 사망자(고독사) 현황 및 대책 관련 보고서).
+3. 송혜교. (2023). AI 돌봄 로봇의 윤리적 쟁점과 정책적 함의. AI와 사회, 4(1), 78-95.
+4. 최윤정. (2023). 인공지능 기반 독거노인 돌봄 서비스의 현황과 발전 방향. 한국케어매니지먼트학회지, 15(2), 45-67.
+5. 통계청 (2024). 장래인구추계: 2022-2072년.
+6. 한국보건사회연구원. (2023). 미래사회 돌봄 수요 예측 및 공급체계 연구.`;
             
             document.getElementById('citationInput').value = exampleCitations;
         }
