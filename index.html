@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>No Hallu - AI 문헌 검증 도구</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            max-width: 900px;
+            width: 100%;
+            padding: 40px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            color: #333;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+        
+        .header p {
+            color: #666;
+            font-size: 1.1rem;
+            margin-bottom: 5px;
+        }
+        
+        .header .subtitle {
+            color: #667eea;
+            font-size: 0.9rem;
+            font-style: italic;
+        }
+        
+        .input-section {
+            margin-bottom: 30px;
+        }
+        
+        .input-label {
+            display: block;
+            margin-bottom: 10px;
+            color: #555;
+            font-weight: 500;
+        }
+        
+        .citation-input {
+            width: 100%;
+            min-height: 200px;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            resize: vertical;
+            font-family: 'Courier New', monospace;
+            transition: border-color 0.3s;
+            line-height: 1.6;
+        }
+        
+        .citation-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .btn {
+            flex: 1;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+        }
+        
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #666;
+        }
+        
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+        
+        .results {
+            display: none;
+        }
+        
+        .summary-box {
+            background: #f0f4ff;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            border: 2px solid #667eea;
+        }
+        
+        .summary-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        .summary-content {
+            font-size: 1.1rem;
+            line-height: 1.6;
+        }
+        
+        .suspicious-found {
+            color: #c53030;
+            font-weight: 600;
+        }
+        
+        .all-clear {
+            color: #276749;
+            font-weight: 600;
+        }
+        
+        .result-item {
+            background: #f9f9f9;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+            position: relative;
+        }
+        
+        .result-item.suspicious {
+            border-left-color: #f56565;
+            background: #fff5f5;
+        }
+        
+        .result-item.checking {
+            border-left-color: #fbbf24;
+            background: #fffbeb;
+        }
+        
+        .result-number {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #e0e0e0;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .result-title {
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #333;
+            padding-right: 50px;
+        }
+        
+        .search-link {
+            display: inline-block;
+            margin-top: 12px;
+            padding: 8px 16px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .search-link:hover {
+            background: #5a67d8;
+            transform: translateY(-1px);
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+        
+        .badge-suspicious {
+            background: #fed7d7;
+            color: #c53030;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            display: none;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: #667eea;
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        .loading-text {
+            color: #666;
+            margin-top: 15px;
+        }
+        
+        .tips {
+            background: #f7fafc;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 30px;
+        }
+        
+        .tips h3 {
+            color: #4a5568;
+            margin-bottom: 10px;
+        }
+        
+        .tips ul {
+            color: #718096;
+            margin-left: 20px;
+            line-height: 1.8;
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                padding: 25px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>No Hallu 🔍</h1>
+            <p>AI가 생성한 가짜 문헌을 검증하는 교사용 도구</p>
+            <p class="subtitle">"하나의 가짜 문헌만 찾아도 성공!"</p>
+        </div>
+        
+        <div class="input-section">
+            <label class="input-label">학생이 제출한 참고문헌 전체를 붙여넣으세요:</label>
+            <textarea 
+                class="citation-input" 
+                id="citationInput"
+                placeholder="예시:&#10;김철수(2023). 한국 현대소설의 이해. 서울: 문학사상사.&#10;이영희(2022). &quot;AI 시대의 문학교육&quot;. 『국어교육연구』, 45, 23-45.&#10;박민수(2021). 디지털 시대의 인문학 연구. 서울: 미래출판사.&#10;...&#10;&#10;한 줄에 하나씩, 또는 전체를 그대로 붙여넣으세요."
+            ></textarea>
+        </div>
+        
+        <div class="button-group">
+            <button class="btn btn-primary" onclick="checkAllCitations()">
+                🔍 일괄 검증 시작
+            </button>
+            <button class="btn btn-secondary" onclick="clearInput()">지우기</button>
+        </div>
+        
+        <div class="loading" id="loading">
+            <p style="font-size: 1.1rem; font-weight: 600; margin-bottom: 20px;">
+                문헌을 검증하고 있습니다...
+            </p>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <p class="loading-text" id="loadingText">0/0 검사 중...</p>
+        </div>
+        
+        <div class="results" id="results">
+            <div class="summary-box" id="summaryBox"></div>
+            <h3 style="margin-bottom: 20px;">상세 검증 결과:</h3>
+            <div id="resultsList"></div>
+        </div>
+        
+        <div class="tips">
+            <h3>💡 사용 안내</h3>
+            <ul>
+                <li><strong>일괄 검증:</strong> 참고문헌 전체를 한 번에 검사합니다</li>
+                <li><strong>Google 검색 활용:</strong> 각 문헌을 Google/Google Scholar에서 검색할 수 있는 링크 제공</li>
+                <li><strong>의심 패턴 감지:</strong> AI가 자주 생성하는 가짜 문헌 패턴 자동 탐지</li>
+                <li><strong>효율적 검증:</strong> 하나의 가짜 문헌만 발견해도 AI 사용 여부 판단 가능</li>
+            </ul>
+        </div>
+    </div>
+    
+    <script>
+        // 의심스러운 패턴 데이터베이스
+        const suspiciousPatterns = {
+            titles: [
+                /한국.*의 이해/,
+                /현대.*연구/,
+                /.*학 개론/,
+                /21세기.*/,
+                /4차 산업혁명/,
+                /디지털 시대의/,
+                /AI.*인문학/,
+                /빅데이터와.*/
+            ],
+            publishers: [
+                /미래출판사/,
+                /혁신문화사/,
+                /디지털출판/,
+                /21세기북스/,
+                /AI출판/
+            ],
+            journals: [
+                /AI.*연구/,
+                /디지털.*학회지/,
+                /미래.*연구/,
+                /혁신.*저널/
+            ],
+            pageNumbers: [
+                /pp\. 1-100/,
+                /100-200/,
+                /1-50$/
+            ]
+        };
+        
+        function extractCitationInfo(citation) {
+            const cleanCitation = citation.trim();
+            
+            // 연도 추출
+            const yearMatch = cleanCitation.match(/\((\d{4})\)/);
+            const year = yearMatch ? yearMatch[1] : null;
+            
+            // 저자명 추출 (더 정교한 패턴)
+            const authorMatch = cleanCitation.match(/^([가-힣A-Za-z\s,&]+)(?=\s*\()/);
+            const author = authorMatch ? authorMatch[1].trim() : null;
+            
+            // 제목 추출 (다양한 형식 지원)
+            let title = null;
+            const titlePatterns = [
+                /[「『""]([^」』""]+)[」』""]/,
+                /\)\.\s*([^.]+)\.\s*(?:서울|부산|대구|인천|광주|대전|울산|출판)/,
+                /\)\.\s*"([^"]+)"/,
+                /\)\.\s*([^.]+)\.\s*\d+권/
+            ];
+            
+            for (const pattern of titlePatterns) {
+                const match = cleanCitation.match(pattern);
+                if (match) {
+                    title = match[1].trim();
+                    break;
+                }
+            }
+            
+            return { 
+                author, 
+                year, 
+                title, 
+                original: cleanCitation,
+                searchQuery: `${author || ''} ${title || ''} ${year || ''}`.trim()
+            };
+        }
+        
+        function analyzeCitation(citationInfo) {
+            let suspicionLevel = 0;
+            let reasons = [];
+            
+            // 제목 패턴 검사
+            if (citationInfo.title) {
+                suspiciousPatterns.titles.forEach(pattern => {
+                    if (pattern.test(citationInfo.title)) {
+                        suspicionLevel += 25;
+                        reasons.push("의심스러운 제목 패턴");
+                    }
+                });
+            }
+            
+            // 출판사 검사
+            suspiciousPatterns.publishers.forEach(pattern => {
+                if (pattern.test(citationInfo.original)) {
+                    suspicionLevel += 30;
+                    reasons.push("의심스러운 출판사");
+                }
+            });
+            
+            // 학술지 검사
+            suspiciousPatterns.journals.forEach(pattern => {
+                if (pattern.test(citationInfo.original)) {
+                    suspicionLevel += 30;
+                    reasons.push("의심스러운 학술지명");
+                }
+            });
+            
+            // 페이지 번호 검사
+            suspiciousPatterns.pageNumbers.forEach(pattern => {
+                if (pattern.test(citationInfo.original)) {
+                    suspicionLevel += 20;
+                    reasons.push("의심스러운 페이지 번호");
+                }
+            });
+            
+            // 연도 검사
+            if (citationInfo.year) {
+                const year = parseInt(citationInfo.year);
+                if (year > 2024) {
+                    suspicionLevel += 50;
+                    reasons.push("미래 날짜");
+                } else if (year === 2023 || year === 2024) {
+                    suspicionLevel += 10;
+                    reasons.push("최신 출판물 (확인 필요)");
+                }
+            }
+            
+            // 제목 길이 검사
+            if (citationInfo.title) {
+                if (citationInfo.title.length < 5) {
+                    suspicionLevel += 15;
+                    reasons.push("너무 짧은 제목");
+                } else if (citationInfo.title.length > 50) {
+                    suspicionLevel += 10;
+                    reasons.push("너무 긴 제목");
+                }
+            }
+            
+            return {
+                suspicionLevel,
+                reasons,
+                isSuspicious: suspicionLevel >= 40
+            };
+        }
+        
+        async function checkAllCitations() {
+            const input = document.getElementById('citationInput').value.trim();
+            if (!input) {
+                alert('참고문헌을 입력해주세요.');
+                return;
+            }
+            
+            // 문헌 분리 (줄바꿈 또는 번호로 구분)
+            let citations = input.split(/\n+/)
+                .map(line => line.trim())
+                .filter(line => line && line.length > 10)
+                .map(line => line.replace(/^\d+[\.)]\s*/, '')); // 번호 제거
+            
+            if (citations.length === 0) {
+                alert('유효한 참고문헌이 없습니다.');
+                return;
+            }
+            
+            // UI 초기화
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('results').style.display = 'none';
+            
+            const progressFill = document.getElementById('progressFill');
+            const loadingText = document.getElementById('loadingText');
+            
+            // 결과 저장
+            const results = [];
+            let suspiciousCount = 0;
+            
+            // 각 문헌 검사 (시뮬레이션)
+            for (let i = 0; i < citations.length; i++) {
+                // 진행률 업데이트
+                const progress = ((i + 1) / citations.length) * 100;
+                progressFill.style.width = `${progress}%`;
+                loadingText.textContent = `${i + 1}/${citations.length} 검사 중...`;
+                
+                // 문헌 분석
+                const citationInfo = extractCitationInfo(citations[i]);
+                const analysis = analyzeCitation(citationInfo);
+                
+                if (analysis.isSuspicious) {
+                    suspiciousCount++;
+                }
+                
+                results.push({
+                    ...citationInfo,
+                    ...analysis,
+                    index: i + 1
+                });
+                
+                // 시각적 효과를 위한 지연
+                await new Promise(resolve => setTimeout(resolve, 300));
+            }
+            
+            // 결과 표시
+            displayResults(results, suspiciousCount);
+            
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('results').style.display = 'block';
+        }
+        
+        function displayResults(results, suspiciousCount) {
+            // 요약 박스 업데이트
+            const summaryBox = document.getElementById('summaryBox');
+            
+            if (suspiciousCount > 0) {
+                summaryBox.innerHTML = `
+                    <div class="summary-title">🚨 검증 완료</div>
+                    <div class="summary-content">
+                        총 <strong>${results.length}개</strong> 문헌 중 
+                        <span class="suspicious-found">${suspiciousCount}개의 의심스러운 문헌</span>을 발견했습니다.<br><br>
+                        <strong>결론:</strong> 이 참고문헌 목록은 AI를 사용해 작성되었을 가능성이 높습니다.
+                    </div>
+                `;
+            } else {
+                summaryBox.innerHTML = `
+                    <div class="summary-title">✅ 검증 완료</div>
+                    <div class="summary-content">
+                        총 <strong>${results.length}개</strong> 문헌을 검사했으나 
+                        <span class="all-clear">의심스러운 패턴을 발견하지 못했습니다</span>.<br><br>
+                        <strong>참고:</strong> 의심 패턴이 없다고 해서 AI를 사용하지 않았다고 확신할 수는 없습니다.
+                        아래 Google 검색 링크로 추가 확인을 권장합니다.
+                    </div>
+                `;
+            }
+            
+            // 상세 결과 표시
+            const resultsList = document.getElementById('resultsList');
+            resultsList.innerHTML = '';
+            
+            results.forEach(result => {
+                const resultDiv = document.createElement('div');
+                resultDiv.className = `result-item ${result.isSuspicious ? 'suspicious' : 'checking'}`;
+                
+                const googleSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(result.searchQuery)}`;
+                const scholarSearchUrl = `https://scholar.google.com/scholar?q=${encodeURIComponent(result.searchQuery)}`;
+                
+                resultDiv.innerHTML = `
+                    <div class="result-number">${result.index}</div>
+                    <div class="result-title">${result.original}</div>
+                    ${result.reasons.length ? `
+                        <div style="color: #666; margin: 10px 0; font-size: 14px;">
+                            ⚠️ ${result.reasons.join(', ')}
+                        </div>
+                    ` : ''}
+                    <div style="margin-top: 12px;">
+                        <a href="${googleSearchUrl}" target="_blank" class="search-link">
+                            🔍 Google에서 검색
+                        </a>
+                        <a href="${scholarSearchUrl}" target="_blank" class="search-link" style="margin-left: 10px;">
+                            🎓 Google Scholar에서 검색
+                        </a>
+                        ${result.isSuspicious ? '<span class="status-badge badge-suspicious">의심됨</span>' : ''}
+                    </div>
+                `;
+                
+                resultsList.appendChild(resultDiv);
+            });
+        }
+        
+        function clearInput() {
+            document.getElementById('citationInput').value = '';
+            document.getElementById('results').style.display = 'none';
+        }
+        
+        // 예시 데이터 추가 기능
+        function loadExample() {
+            const exampleCitations = `1. 김철수(2023). 한국 현대소설의 이해. 서울: 문학사상사.
+2. 이영희(2022). "AI 시대의 문학교육". 『국어교육연구』, 45, 23-45.
+3. 박민수(2025). 디지털 시대의 인문학 연구. 서울: 미래출판사.
+4. 정수진(2023). "4차 산업혁명과 한국문학의 미래". 『AI문학연구』, 12(3), pp. 100-200.
+5. 최동훈(2021). 『빅데이터와 문학 비평』. 서울: 혁신문화사.`;
+            
+            document.getElementById('citationInput').value = exampleCitations;
+        }
+    </script>
+</body>
+</html>
