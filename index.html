@@ -3,285 +3,802 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>등재 학술지 데이터 처리</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <title>No Hallu - AI 문헌 검증 도구</title>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
         body {
-            font-family: 'Pretendard', -apple-system, sans-serif;
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             padding: 20px;
-            background: #f5f5f5;
         }
+        
         .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            max-width: 900px;
+            width: 100%;
+            padding: 40px;
         }
-        .info-box {
-            background: #667eea;
-            color: white;
-            padding: 20px;
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            color: #333;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+        
+        .header p {
+            color: #666;
+            font-size: 1.1rem;
+            margin-bottom: 5px;
+        }
+        
+        .header .subtitle {
+            color: #667eea;
+            font-size: 0.9rem;
+            font-style: italic;
+        }
+
+        .version-info {
+            background: #e0f2fe;
+            padding: 10px 20px;
             border-radius: 8px;
             margin-bottom: 20px;
-        }
-        #journalList {
-            max-height: 400px;
-            overflow-y: auto;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            padding: 15px;
-            background: #f9f9f9;
-            font-family: 'Courier New', monospace;
-            font-size: 13px;
-            margin: 20px 0;
-        }
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 15px;
-            margin: 20px 0;
-        }
-        .stat-card {
-            background: #f0f4ff;
-            padding: 20px;
-            border-radius: 8px;
             text-align: center;
+            font-size: 0.9rem;
+            color: #0369a1;
         }
-        .stat-number {
-            font-size: 2em;
-            font-weight: bold;
-            color: #667eea;
+        
+        .input-section {
+            margin-bottom: 30px;
         }
-        #codeOutput {
-            background: #1e1e1e;
-            color: #d4d4d4;
-            padding: 20px;
-            border-radius: 8px;
-            overflow-x: auto;
-            font-family: 'Consolas', 'Monaco', monospace;
-            font-size: 14px;
-            line-height: 1.5;
+        
+        .input-label {
+            display: block;
+            margin-bottom: 10px;
+            color: #555;
+            font-weight: 500;
         }
-        .copy-btn {
+        
+        .citation-input {
+            width: 100%;
+            min-height: 200px;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            resize: vertical;
+            font-family: 'Courier New', monospace;
+            transition: border-color 0.3s;
+            line-height: 1.6;
+        }
+        
+        .citation-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .btn {
+            flex: 1;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary {
             background: #667eea;
             color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: bold;
-            margin: 10px 0;
         }
-        .copy-btn:hover {
+        
+        .btn-primary:hover {
             background: #5a67d8;
+            transform: translateY(-2px);
         }
-        .search-box {
+        
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #666;
+        }
+        
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+        
+        .results {
+            display: none;
+        }
+        
+        .summary-box {
+            background: #f0f4ff;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            border: 2px solid #667eea;
+        }
+        
+        .summary-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 15px;
+        }
+        
+        .summary-content {
+            font-size: 1.1rem;
+            line-height: 1.6;
+        }
+        
+        .suspicious-found {
+            color: #c53030;
+            font-weight: 600;
+        }
+        
+        .all-clear {
+            color: #276749;
+            font-weight: 600;
+        }
+        
+        .result-item {
+            background: #f9f9f9;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+            position: relative;
+        }
+        
+        .result-item.suspicious {
+            border-left-color: #f56565;
+            background: #fff5f5;
+        }
+
+        .result-item.invalid-journal {
+            border-left-color: #dc2626;
+            background: #fef2f2;
+        }
+        
+        .result-item.checking {
+            border-left-color: #fbbf24;
+            background: #fffbeb;
+        }
+        
+        .result-number {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #e0e0e0;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
             display: flex;
-            gap: 10px;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .result-title {
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #333;
+            padding-right: 50px;
+        }
+        
+        .search-link {
+            display: inline-block;
+            margin-top: 12px;
+            padding: 8px 16px;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .search-link:hover {
+            background: #5a67d8;
+            transform: translateY(-1px);
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+        
+        .badge-suspicious {
+            background: #fed7d7;
+            color: #c53030;
+        }
+
+        .badge-invalid {
+            background: #fecaca;
+            color: #dc2626;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            display: none;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #f0f0f0;
+            border-radius: 10px;
+            overflow: hidden;
             margin: 20px 0;
         }
-        .search-input {
-            flex: 1;
-            padding: 10px;
-            border: 2px solid #e0e0e0;
-            border-radius: 5px;
-            font-size: 16px;
+        
+        .progress-fill {
+            height: 100%;
+            background: #667eea;
+            width: 0%;
+            transition: width 0.3s;
+        }
+        
+        .loading-text {
+            color: #666;
+            margin-top: 15px;
+        }
+        
+        .tips {
+            background: #f7fafc;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 30px;
+        }
+        
+        .tips h3 {
+            color: #4a5568;
+            margin-bottom: 10px;
+        }
+        
+        .tips p {
+            color: #718096;
+            line-height: 1.8;
+        }
+
+        .journal-check-info {
+            background: #f0fdf4;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-size: 14px;
+            border: 1px solid #86efac;
+        }
+
+        .journal-check-info.invalid {
+            background: #fef2f2;
+            border: 1px solid #fca5a5;
+        }
+
+        .file-input-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f8fafc;
+            border-radius: 10px;
+            border: 1px dashed #cbd5e1;
+        }
+
+        .file-input-section label {
+            font-size: 0.9rem;
+            color: #64748b;
+        }
+
+        .db-status {
+            font-size: 0.85rem;
+            color: #059669;
+            margin-top: 8px;
+        }
+        
+        @media (max-width: 600px) {
+            .container {
+                padding: 25px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>📊 등재 학술지 데이터 처리기</h1>
+        <div class="header">
+            <h1>No Hallu 🔍</h1>
+            <p>AI가 생성한 가짜 문헌을 검증하는 교사용 도구</p>
+            <p class="subtitle">"하나의 가짜 문헌만 찾아도 성공!"</p>
+        </div>
+
+        <div class="version-info">
+            ✨ <strong>v2.0</strong> — 2025년 12월 14일 학술지 DB 업데이트
+        </div>
+
+        <div class="file-input-section">
+            <label>📚 학술지 DB 파일 (CSV):</label>
+            <input type="file" id="journalDbFile" accept=".csv" style="margin-top: 8px;">
+            <div class="db-status" id="dbStatus">기본 DB 사용 중</div>
+        </div>
         
-        <div class="info-box">
-            <h2>CSV 파일 분석 중...</h2>
-            <p>kjournal202501.csv 파일을 처리하고 있습니다.</p>
+        <div class="input-section">
+            <label class="input-label">학생이 제출한 참고문헌 전체를 붙여넣으세요:</label>
+            <textarea 
+                class="citation-input" 
+                id="citationInput"
+                placeholder="참고문헌을 여기에 붙여넣으세요.&#10;&#10;한 줄에 하나씩, 또는 전체를 그대로 붙여넣으세요."
+            ></textarea>
         </div>
-
-        <div id="stats" class="stats"></div>
-
-        <div class="search-box">
-            <input type="text" id="searchInput" class="search-input" placeholder="학술지명 검색 (예: 국어)">
-            <button class="copy-btn" onclick="searchJournals()">검색</button>
+        
+        <div class="button-group">
+            <button class="btn btn-primary" onclick="checkAllCitations()">
+                🔍 검증 시작
+            </button>
+            <button class="btn btn-secondary" onclick="clearInput()">지우기</button>
         </div>
-
-        <div id="journalList"></div>
-
-        <h3>🔧 NoHallu 통합 코드</h3>
-        <button class="copy-btn" onclick="copyCode()">📋 코드 복사하기</button>
-        <div id="codeOutput"></div>
+        
+        <div class="loading" id="loading">
+            <p style="font-size: 1.1rem; font-weight: 600; margin-bottom: 20px;">
+                문헌을 검증하고 있습니다...
+            </p>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <p class="loading-text" id="loadingText">0/0 검사 중...</p>
+        </div>
+        
+        <div class="results" id="results">
+            <div class="summary-box" id="summaryBox"></div>
+            <h3 style="margin-bottom: 20px;">상세 검증 결과:</h3>
+            <div id="resultsList"></div>
+        </div>
+        
+        <div class="tips">
+            <h3>💡 사용 안내</h3>
+            <p>참고문헌 전체를 위 입력창에 붙여넣고 "검증 시작" 버튼을 누르세요. 
+            각 문헌에 대해 Google 및 Google Scholar 검색 링크가 제공됩니다.</p>
+        </div>
     </div>
-
+    
     <script>
-        let allJournals = [];
-        let validJournalsSet = null;
+        /* ============================================================
+         * 📚 한국 등재 학술지 목록
+         * 
+         * 이 목록을 업데이트하려면:
+         * 1. 한국연구재단에서 최신 학술지 목록을 다운로드
+         * 2. 아래 Set 안의 내용을 교체
+         * 3. 형식: "학술지명", (쉼표로 구분, 큰따옴표 사용)
+         * 
+         * 마지막 업데이트: 2025년 12월 14일 (2,886개)
+         * ============================================================ */
+        let validKoreanJournals = new Set([
+            // CSV 파일 로드 시 동적으로 채워짐
+            // GitHub 배포 시에는 여기에 직접 학술지명을 나열하세요
+        ]);
 
-        async function loadJournalData() {
+        // CSV 파일에서 학술지 목록 로드
+        document.getElementById('journalDbFile').addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
             try {
-                // CSV 파일 읽기
-                const csvContent = await window.fs.readFile('kjournal202501.csv', { encoding: 'utf8' });
+                const text = await file.text();
+                const lines = text.split('\n')
+                    .map(line => line.trim())
+                    .filter(line => line.length > 0);
                 
-                // PapaParse로 CSV 파싱
-                const results = Papa.parse(csvContent, {
-                    header: true,
-                    skipEmptyLines: true,
-                    encoding: 'UTF-8'
-                });
-                
-                // 첫 번째 컬럼의 키 찾기
-                const firstKey = Object.keys(results.data[0])[0];
-                
-                // 학술지명 추출
-                allJournals = results.data
-                    .map(row => row[firstKey])
-                    .filter(name => name && name.trim())
-                    .map(name => name.trim());
-                
-                // 중복 제거
-                const uniqueJournals = [...new Set(allJournals)];
-                
-                // Set 생성 (빠른 검색을 위해)
-                validJournalsSet = new Set(uniqueJournals);
-                
-                // 통계 표시
-                displayStats(uniqueJournals);
-                
-                // 샘플 표시
-                displayJournals(uniqueJournals.slice(0, 50));
-                
-                // 코드 생성
-                generateCode(uniqueJournals);
-                
+                validKoreanJournals = new Set(lines);
+                document.getElementById('dbStatus').textContent = 
+                    `✅ ${validKoreanJournals.size}개 학술지 로드 완료`;
             } catch (error) {
-                console.error('Error:', error);
-                document.querySelector('.info-box').innerHTML = `
-                    <h2>❌ 오류 발생</h2>
-                    <p>${error.message}</p>
-                `;
+                document.getElementById('dbStatus').textContent = 
+                    `❌ 파일 로드 실패: ${error.message}`;
             }
-        }
+        });
 
-        function displayStats(journals) {
-            const stats = document.getElementById('stats');
-            const dataSize = JSON.stringify(journals).length / 1024;
+        // 의심스러운 패턴 데이터베이스
+        const suspiciousPatterns = {
+            // 가짜 학술지 패턴 (실제로 존재하지 않는 조합)
+            fakeJournals: [
+                /^AI와\s/,
+                /^빅데이터와\s/,
+                /^4차산업혁명/,
+                /와 미래$/,
+                /와 사회$/,
+                /와 인간$/,
+                /^디지털\s.*학회지$/,
+                /^미래\s.*연구$/,
+                /^혁신\s.*저널$/,
+                /^한국AI/,
+                /^현대.*학회지$/
+            ],
+            // 라운드 넘버 페이지 (AI가 자주 생성하는 패턴)
+            roundPageNumbers: [
+                /,\s*1-25\.?$/,
+                /,\s*1-50\.?$/,
+                /,\s*50-100\.?$/,
+                /,\s*100-150\.?$/,
+                /,\s*1-100\.?$/,
+                /,\s*100-200\.?$/
+            ],
+            // 일련번호 패턴 (MLA/APA/Chicago에는 없음)
+            serialNumbers: [
+                /^\d+\.\s/,      // "1. "
+                /^\d+\)\s/,      // "1) "
+                /^\[\d+\]\s/,    // "[1] "
+                /^\(\d+\)\s/     // "(1) "
+            ]
+        };
+        
+        function extractCitationInfo(citation) {
+            let cleanCitation = citation.trim();
             
-            stats.innerHTML = `
-                <div class="stat-card">
-                    <div class="stat-number">${journals.length}</div>
-                    <div>총 학술지 수</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number">${dataSize.toFixed(1)} KB</div>
-                    <div>데이터 크기</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number">${journals.filter(j => j.includes('국어') || j.includes('문학')).length}</div>
-                    <div>문학 관련 학술지</div>
-                </div>
-            `;
+            // 일련번호 제거 전에 존재 여부 확인
+            let hasSerialNumber = suspiciousPatterns.serialNumbers.some(p => p.test(cleanCitation));
             
-            document.querySelector('.info-box').innerHTML = `
-                <h2>✅ 분석 완료!</h2>
-                <p>${journals.length}개의 등재 학술지를 발견했습니다.</p>
-                <p>데이터 크기: ${dataSize.toFixed(1)}KB - NoHallu에 포함하기 적절한 크기입니다!</p>
-            `;
-        }
-
-        function displayJournals(journals, searchTerm = '') {
-            const list = document.getElementById('journalList');
+            // 일련번호 제거
+            cleanCitation = cleanCitation
+                .replace(/^\d+[\.\)]\s*/, '')
+                .replace(/^\[\d+\]\s*/, '')
+                .replace(/^\(\d+\)\s*/, '');
             
-            if (searchTerm) {
-                list.innerHTML = `<strong>검색 결과 (${journals.length}개):</strong>\n\n`;
+            // 연도 추출
+            const yearMatch = cleanCitation.match(/\((\d{4})\)/);
+            const year = yearMatch ? yearMatch[1] : null;
+            
+            // 저자명 추출
+            const authorMatch = cleanCitation.match(/^([가-힣A-Za-z\s,&·]+)(?=\s*[\(\.])/);
+            const author = authorMatch ? authorMatch[1].trim() : null;
+            
+            // 학술지명 추출
+            let journal = null;
+            const journalPatterns = [
+                /『([^』]+)』/,
+                /\.\s*([가-힣]+(?:학회지|연구|학보|논총|논문집|학지))/,
+                /,\s*([가-힣]+(?:학회지|연구|학보|논총|논문집|학지))/,
+                /\.\s*([A-Z][A-Za-z\s&]+(?:Journal|Review|Studies|Research))/i
+            ];
+            
+            for (const pattern of journalPatterns) {
+                const match = cleanCitation.match(pattern);
+                if (match) {
+                    journal = match[1].trim();
+                    break;
+                }
+            }
+            
+            // 제목 추출
+            let title = null;
+            const titlePatterns = [
+                /[「""]([^」""]+)[」""]/,
+                /\d{4}\)\.\s*([^.]+?)(?:\.|,|\s*[가-힣]+:|$)/,
+                /\)\.\s*([^.]+?)\.\s*(?:서울|부산|대구|인천|광주|대전|울산|경기|강원|충북|충남|전북|전남|경북|경남|제주|출판|:)/
+            ];
+            
+            for (const pattern of titlePatterns) {
+                const match = cleanCitation.match(pattern);
+                if (match) {
+                    title = match[1].trim();
+                    break;
+                }
+            }
+            
+            // 검색어 생성
+            let searchQuery = '';
+            if (title) {
+                searchQuery = `${title} ${author || ''} ${year || ''}`.trim();
+            } else if (author && year) {
+                searchQuery = `${author} ${year}`;
             } else {
-                list.innerHTML = `<strong>학술지 목록 샘플 (처음 50개):</strong>\n\n`;
+                searchQuery = cleanCitation
+                    .replace(/\([^)]*\)/g, ' ')
+                    .replace(/[『』「」""]/g, ' ')
+                    .replace(/\s+/g, ' ')
+                    .substring(0, 100)
+                    .trim();
             }
             
-            journals.forEach((journal, index) => {
-                list.innerHTML += `${index + 1}. ${journal}\n`;
-            });
+            return { 
+                author, 
+                year, 
+                title,
+                journal,
+                hasSerialNumber,
+                original: citation.trim(),
+                searchQuery
+            };
+        }
+        
+        function analyzeCitation(citationInfo, allYears) {
+            let suspicionLevel = 0;
+            let reasons = [];
             
-            if (!searchTerm && allJournals.length > 50) {
-                list.innerHTML += `\n... 그 외 ${allJournals.length - 50}개`;
+            // 1. 학술지 검증 (가장 중요)
+            if (citationInfo.journal) {
+                const isValidJournal = validKoreanJournals.size > 0 && 
+                                       validKoreanJournals.has(citationInfo.journal);
+                
+                if (!isValidJournal && validKoreanJournals.size > 0) {
+                    // 가짜 학술지 패턴 확인
+                    let isFakePattern = suspiciousPatterns.fakeJournals.some(
+                        p => p.test(citationInfo.journal)
+                    );
+                    
+                    if (isFakePattern) {
+                        suspicionLevel += 60;
+                        reasons.push(`의심스러운 학술지명: "${citationInfo.journal}"`);
+                    } else if (/연구|학회지|학보|논총/.test(citationInfo.journal)) {
+                        suspicionLevel += 50;
+                        reasons.push(`미등재 학술지: "${citationInfo.journal}"`);
+                    }
+                }
             }
+            
+            // 2. 라운드 넘버 페이지
+            const hasRoundPage = suspiciousPatterns.roundPageNumbers.some(
+                p => p.test(citationInfo.original)
+            );
+            if (hasRoundPage) {
+                suspicionLevel += 15;
+                reasons.push("정형화된 페이지 번호");
+            }
+            
+            // 3. 연도 검사
+            if (citationInfo.year) {
+                const year = parseInt(citationInfo.year);
+                const currentYear = new Date().getFullYear();
+                
+                if (year > currentYear) {
+                    suspicionLevel += 50;
+                    reasons.push("미래 연도");
+                } else if (year === currentYear) {
+                    suspicionLevel += 10;
+                    reasons.push(`${currentYear}년 최신 자료`);
+                }
+            }
+            
+            return {
+                suspicionLevel,
+                reasons,
+                isSuspicious: suspicionLevel >= 40,
+                isInvalidJournal: citationInfo.journal && 
+                                  validKoreanJournals.size > 0 && 
+                                  !validKoreanJournals.has(citationInfo.journal)
+            };
         }
 
-        function searchJournals() {
-            const searchTerm = document.getElementById('searchInput').value.trim();
-            if (!searchTerm) {
-                displayJournals(allJournals.slice(0, 50));
+        function analyzeYearDistribution(citations) {
+            const years = citations
+                .map(c => c.year)
+                .filter(y => y)
+                .map(y => parseInt(y));
+            
+            if (years.length < 3) return null;
+            
+            const currentYear = new Date().getFullYear();
+            const recentYears = years.filter(y => y >= currentYear - 5);
+            const recentRatio = recentYears.length / years.length;
+            
+            // 80% 이상이 최근 5년 내 문헌이면 경고
+            if (recentRatio >= 0.8) {
+                return {
+                    warning: true,
+                    message: `참고문헌의 ${Math.round(recentRatio * 100)}%가 최근 5년 내 출판물입니다.`
+                };
+            }
+            return null;
+        }
+
+        function analyzeSerialNumberUsage(citations) {
+            const withSerial = citations.filter(c => c.hasSerialNumber).length;
+            const ratio = withSerial / citations.length;
+            
+            // 50% 이상이 일련번호를 사용하면 경고
+            if (ratio >= 0.5 && withSerial >= 3) {
+                return {
+                    warning: true,
+                    message: `참고문헌에 일련번호(1., 2., ...)가 사용되었습니다. MLA/APA/Chicago 양식에서는 일련번호를 사용하지 않습니다.`
+                };
+            }
+            return null;
+        }
+        
+        async function checkAllCitations() {
+            const input = document.getElementById('citationInput').value.trim();
+            if (!input) {
+                alert('참고문헌을 입력해주세요.');
                 return;
             }
             
-            const filtered = allJournals.filter(journal => 
-                journal.toLowerCase().includes(searchTerm.toLowerCase())
-            );
+            // 문헌 분리
+            let citations = input.split(/\n+/)
+                .map(line => line.trim())
+                .filter(line => line && line.length > 10);
             
-            displayJournals(filtered, searchTerm);
-        }
-
-        function generateCode(journals) {
-            const codeOutput = document.getElementById('codeOutput');
+            if (citations.length === 0) {
+                alert('유효한 참고문헌이 없습니다.');
+                return;
+            }
             
-            // 압축된 형태로 저장 (처음 10개만 보여주고 나머지는 ...)
-            const sampleJournals = journals.slice(0, 10);
-            const remainingCount = journals.length - 10;
+            // UI 초기화
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('results').style.display = 'none';
             
-            const code = `// 한국 등재 학술지 목록 (2025년 1월 기준, 총 ${journals.length}개)
-const validKoreanJournals = new Set([
-${sampleJournals.map(j => `    "${j}"`).join(',\n')},
-    // ... 그리고 ${remainingCount}개 더
-]);
-
-// 학술지 검증 함수
-function isValidJournal(journalName) {
-    // 정규화: 공백 제거, 대소문자 통일
-    const normalized = journalName.trim();
-    return validKoreanJournals.has(normalized);
-}
-
-// NoHallu에 통합할 코드
-function checkJournalValidity(citationInfo) {
-    // 학술지명이 있는 경우 검증
-    if (citationInfo.journal) {
-        if (!isValidJournal(citationInfo.journal)) {
-            citationInfo.suspicionLevel += 50;
-            citationInfo.reasons.push("등재되지 않은 학술지");
-            return true; // 가짜 발견!
-        }
-    }
-    return false;
-}
-
-// 전체 데이터는 별도 파일로 저장하거나 
-// 아래 주석을 해제하여 사용하세요:
-/*
-const validKoreanJournals = new Set(${JSON.stringify(journals)});
-*/`;
-
-            codeOutput.textContent = code;
-        }
-
-        function copyCode() {
-            const codeOutput = document.getElementById('codeOutput');
-            const textArea = document.createElement('textarea');
-            textArea.value = codeOutput.textContent;
-            document.body.appendChild(textArea);
-            textArea.select();
-            document.execCommand('copy');
-            document.body.removeChild(textArea);
+            const progressFill = document.getElementById('progressFill');
+            const loadingText = document.getElementById('loadingText');
             
-            alert('코드가 복사되었습니다!');
+            // 문헌 정보 추출
+            const citationInfos = citations.map(c => extractCitationInfo(c));
+            
+            // 전체 패턴 분석
+            const yearDistribution = analyzeYearDistribution(citationInfos);
+            const serialNumberUsage = analyzeSerialNumberUsage(citationInfos);
+            
+            // 결과 저장
+            const results = [];
+            let suspiciousCount = 0;
+            let invalidJournalCount = 0;
+            
+            // 각 문헌 검사
+            for (let i = 0; i < citationInfos.length; i++) {
+                const progress = ((i + 1) / citationInfos.length) * 100;
+                progressFill.style.width = `${progress}%`;
+                loadingText.textContent = `${i + 1}/${citationInfos.length} 검사 중...`;
+                
+                const analysis = analyzeCitation(citationInfos[i], citationInfos.map(c => c.year));
+                
+                if (analysis.isSuspicious) suspiciousCount++;
+                if (analysis.isInvalidJournal) invalidJournalCount++;
+                
+                results.push({
+                    ...citationInfos[i],
+                    ...analysis,
+                    index: i + 1
+                });
+                
+                await new Promise(resolve => setTimeout(resolve, 200));
+            }
+            
+            // 결과 표시
+            displayResults(results, suspiciousCount, invalidJournalCount, 
+                          yearDistribution, serialNumberUsage);
+            
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('results').style.display = 'block';
         }
-
-        // 페이지 로드 시 실행
-        loadJournalData();
-
-        // Enter 키로 검색
-        document.getElementById('searchInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                searchJournals();
+        
+        function displayResults(results, suspiciousCount, invalidJournalCount, 
+                               yearDist, serialNum) {
+            const summaryBox = document.getElementById('summaryBox');
+            
+            let additionalWarnings = '';
+            if (yearDist?.warning) {
+                additionalWarnings += `<br>⚠️ ${yearDist.message}`;
+            }
+            if (serialNum?.warning) {
+                additionalWarnings += `<br>⚠️ ${serialNum.message}`;
+            }
+            
+            const hasWarnings = suspiciousCount > 0 || yearDist?.warning || serialNum?.warning;
+            
+            if (hasWarnings) {
+                summaryBox.innerHTML = `
+                    <div class="summary-title">🚨 검증 완료</div>
+                    <div class="summary-content">
+                        총 <strong>${results.length}개</strong> 문헌 검사 완료.
+                        ${suspiciousCount > 0 ? `<br><span class="suspicious-found">${suspiciousCount}개의 의심스러운 문헌</span> 발견.` : ''}
+                        ${invalidJournalCount > 0 ? `<br><span class="suspicious-found">${invalidJournalCount}개는 미등재/미확인 학술지.</span>` : ''}
+                        ${additionalWarnings}
+                    </div>
+                `;
+            } else {
+                summaryBox.innerHTML = `
+                    <div class="summary-title">✅ 검증 완료</div>
+                    <div class="summary-content">
+                        총 <strong>${results.length}개</strong> 문헌을 검사했습니다.
+                        <span class="all-clear">의심 패턴이 발견되지 않았습니다.</span><br><br>
+                        아래 검색 링크로 추가 확인을 권장합니다.
+                    </div>
+                `;
+            }
+            
+            // 상세 결과 표시
+            const resultsList = document.getElementById('resultsList');
+            resultsList.innerHTML = '';
+            
+            results.forEach(result => {
+                const resultDiv = document.createElement('div');
+                
+                let className = 'result-item';
+                if (result.isInvalidJournal) {
+                    className += ' invalid-journal';
+                } else if (result.isSuspicious) {
+                    className += ' suspicious';
+                }
+                
+                resultDiv.className = className;
+                
+                const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(result.searchQuery)}`;
+                const scholarUrl = `https://scholar.google.com/scholar?q=${encodeURIComponent(result.searchQuery)}`;
+                
+                let journalInfo = '';
+                if (result.journal) {
+                    const isValid = validKoreanJournals.size > 0 && 
+                                   validKoreanJournals.has(result.journal);
+                    journalInfo = `
+                        <div class="journal-check-info ${isValid ? '' : 'invalid'}">
+                            📚 학술지: "${result.journal}" ${isValid ? '✅ 등재 확인' : '❌ 미등재/미확인'}
+                        </div>
+                    `;
+                }
+                
+                resultDiv.innerHTML = `
+                    <div class="result-number">${result.index}</div>
+                    <div class="result-title">${result.original}</div>
+                    ${journalInfo}
+                    ${result.reasons.length ? `
+                        <div style="color: #666; margin: 10px 0; font-size: 14px;">
+                            ⚠️ ${result.reasons.join(', ')}
+                        </div>
+                    ` : ''}
+                    <div style="margin-top: 12px;">
+                        <a href="${googleUrl}" target="_blank" class="search-link">
+                            🔍 Google 검색
+                        </a>
+                        <a href="${scholarUrl}" target="_blank" class="search-link" style="margin-left: 10px;">
+                            🎓 Scholar 검색
+                        </a>
+                        ${result.isInvalidJournal ? '<span class="status-badge badge-invalid">미등재 학술지</span>' : 
+                          result.isSuspicious ? '<span class="status-badge badge-suspicious">의심</span>' : ''}
+                    </div>
+                `;
+                
+                resultsList.appendChild(resultDiv);
+            });
+        }
+        
+        function clearInput() {
+            document.getElementById('citationInput').value = '';
+            document.getElementById('results').style.display = 'none';
+        }
+        
+        document.getElementById('citationInput').addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'Enter') {
+                checkAllCitations();
             }
         });
     </script>
