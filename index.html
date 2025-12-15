@@ -188,7 +188,7 @@
         <div class="header">
             <h1>No Hallu 🔍</h1>
             <p>AI가 생성한 가짜 문헌을 검증하는 교사용 도구</p>
-            <p class="subtitle">"하나의 가짜 문헌만 찾아도 성공!"</p>
+            <p class="subtitle">"학생이 무엇을 읽고 쓰는지 끝까지 함께 본다"</p>
         </div>
 
         <div class="version-info">
@@ -233,7 +233,7 @@
             각 문헌에 대해 Google 및 Google Scholar 검색 링크가 제공됩니다.</p>
             <p style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e2e8f0; color: #64748b; font-size: 0.85rem;">
             ⚠️ 적발 회피 목적의 사용을 방지하기 위해 검증 원리는 공개되지 않습니다. 
-            '확인 필요' 또는 '의심' 표시가 나타나더라도 Google/Scholar 검색을 통한 개별 검증이 반드시 필요합니다.
+            '확인 필요' 표시가 나타나더라도 Google/Scholar 검색을 통한 개별 확인이 반드시 필요합니다.
             </p>
         </div>
     </div>
@@ -252,7 +252,7 @@
          * ※ 큰따옴표(")가 데이터에 포함되면 코드가 작동하지 않습니다!
          * ============================================================ */
         const validKoreanJournals = new Set([
-           " International Journal of Thyroidology",
+            " International Journal of Thyroidology",
 " Journal of Naturopathy (한국자연치유학회지)",
 " Korean Journal of Helicobacter Upper Gastrointestinal Research ",
 " 기업과혁신연구",
@@ -3128,17 +3128,6 @@
 "회계ㆍ세무와 감사 연구",
 "회계와 정책연구",
 "회계저널",
-"회계정보연구",
-"회계학연구",
-"회생법학",
-"횡단인문학",
-"효학연구",
-"후마니타스 포럼",
-"휴먼서비스문화연구",
-"휴먼웨어연구",
-"휴양및경관연구",
-"金融工學硏究",
-"倫理硏究",
             // === 위 샘플을 지우고 변환한 목록 전체를 붙여넣기 ===
         ]);
 
@@ -3375,13 +3364,13 @@
             
             if (hasWarnings) {
                 summaryBox.innerHTML = `
-                    <div class="summary-title">🚨 검증 완료</div>
+                    <div class="summary-title">🔍 검증 완료</div>
                     <div class="summary-content">
                         총 <strong>${results.length}개</strong> 문헌 검사 완료.
-                        ${suspiciousCount > 0 ? `<br><span class="suspicious-found">${suspiciousCount}개 문헌에서 의심 패턴 발견.</span>` : ''}
-                        ${invalidJournalCount > 0 ? `<br><span class="suspicious-found">${invalidJournalCount}개 문헌 확인 필요.</span>` : ''}
+                        ${suspiciousCount > 0 ? `<br><span class="suspicious-found">${suspiciousCount}개 문헌 확인 필요.</span>` : ''}
+                        ${invalidJournalCount > 0 && invalidJournalCount !== suspiciousCount ? `<br><span class="suspicious-found">${invalidJournalCount}개 학술지 확인 필요.</span>` : ''}
                         ${additionalWarnings}
-                        <br><br>아래 검색 링크를 통해 개별 검증을 진행하세요.
+                        <br><br>아래 검색 링크를 통해 함께 확인해 보세요.
                     </div>
                 `;
             } else {
@@ -3389,8 +3378,8 @@
                     <div class="summary-title">✅ 검증 완료</div>
                     <div class="summary-content">
                         총 <strong>${results.length}개</strong> 문헌을 검사했습니다.
-                        <span class="all-clear">의심 패턴이 발견되지 않았습니다.</span><br><br>
-                        아래 검색 링크로 추가 확인을 권장합니다.
+                        <span class="all-clear">추가 확인이 필요한 문헌이 없습니다.</span><br><br>
+                        아래 검색 링크로 함께 확인해 볼 수도 있습니다.
                     </div>
                 `;
             }
@@ -3423,7 +3412,7 @@
                         <a href="${googleUrl}" target="_blank" class="search-link">🔍 Google 검색</a>
                         <a href="${scholarUrl}" target="_blank" class="search-link" style="margin-left: 10px;">🎓 Scholar 검색</a>
                         ${result.isInvalidJournal ? '<span class="status-badge badge-invalid">확인 필요</span>' : 
-                          result.isSuspicious ? '<span class="status-badge badge-suspicious">의심</span>' : ''}
+                          result.isSuspicious ? '<span class="status-badge badge-suspicious">확인 필요</span>' : ''}
                     </div>
                 `;
                 
