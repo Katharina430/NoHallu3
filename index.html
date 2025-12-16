@@ -3412,16 +3412,11 @@
             const hasWarnings = flaggedCount > 0 || globalPatterns.length > 0;
             
             if (hasWarnings) {
-                let globalPatternText = globalPatterns.length > 0 
-                    ? `<br>${globalPatterns.join('<br>')}`
-                    : '';
-                
                 summaryBox.innerHTML = `
                     <div class="summary-title">🔍 검증 완료</div>
                     <div class="summary-content">
                         총 <strong>${results.length}개</strong> 문헌 검사 완료.
                         ${flaggedCount > 0 ? `<br><span class="suspicious-found">${flaggedCount}개 문헌 확인 필요.</span>` : ''}
-                        ${globalPatternText}
                         <br><br>아래 검색 링크를 통해 함께 확인해 보세요.
                     </div>
                 `;
@@ -3438,6 +3433,16 @@
             
             const resultsList = document.getElementById('resultsList');
             resultsList.innerHTML = '';
+            
+            // 전체 패턴이 있으면 맨 위에 표시
+            if (globalPatterns.length > 0) {
+                const globalDiv = document.createElement('div');
+                globalDiv.className = 'result-item invalid-journal';
+                globalDiv.innerHTML = `
+                    <div class="journal-check-info invalid">⚠️ ${globalPatterns.join(', ')}</div>
+                `;
+                resultsList.appendChild(globalDiv);
+            }
             
             results.forEach(result => {
                 const resultDiv = document.createElement('div');
