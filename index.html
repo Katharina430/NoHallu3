@@ -255,7 +255,7 @@
          * ※ 큰따옴표(")가 데이터에 포함되면 코드가 작동하지 않습니다!
          * ============================================================ */
         const validKoreanJournals = new Set([
-            " International Journal of Thyroidology",
+           " International Journal of Thyroidology",
 " Journal of Naturopathy (한국자연치유학회지)",
 " Korean Journal of Helicobacter Upper Gastrointestinal Research ",
 " 기업과혁신연구",
@@ -3268,6 +3268,20 @@
                         suspicionLevel += 50;
                         reasons.push("미등재 학술지");
                     }
+                }
+                
+                // 권호/페이지 정보 누락 검사
+                const hasVolumeInfo = /\d+\s*\(\s*\d+\s*\)/.test(citationInfo.original) ||  // 26(3)
+                                      /제?\s*\d+\s*권/.test(citationInfo.original) ||       // 제26권
+                                      /Vol\.?\s*\d+/i.test(citationInfo.original) ||        // Vol.26
+                                      /\d+\s*호/.test(citationInfo.original);               // 3호
+                
+                const hasPageInfo = /\d+\s*[-–]\s*\d+/.test(citationInfo.original) ||       // 45-67
+                                    /pp\.?\s*\d+/i.test(citationInfo.original);             // pp.45
+                
+                if (!hasVolumeInfo && !hasPageInfo) {
+                    suspicionLevel += 40;
+                    reasons.push("권호/페이지 정보 없음");
                 }
             }
             
