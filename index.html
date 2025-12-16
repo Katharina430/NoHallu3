@@ -233,10 +233,10 @@
             각 문헌에 대해 Google 및 Google Scholar 검색 링크가 제공됩니다.</p>
             <p style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e2e8f0; color: #64748b; font-size: 0.85rem;">
             ⚠️ 적발 회피 목적의 사용을 방지하기 위해 검증 원리는 공개되지 않습니다. 
-            '확인 필요' 표시가 나타나더라도 Google/Scholar 검색을 통한 개별 확인이 반드시 필요합니다.
+            검증 결과에 표시되는 번호는 AI 생성 가능성을 나타내는 패턴입니다.
             </p>
             <p style="margin-top: 10px; color: #64748b; font-size: 0.85rem;">
-            💬 사용자 의견이 있다면 bookbookseo@gmail.com으로 보내주십시오.
+            💬 교수자 사용 안내 및 의견: bookbookseo@gmail.com
             </p>
         </div>
     </div>
@@ -3252,7 +3252,16 @@
         
         function analyzeCitation(citationInfo) {
             let suspicionLevel = 0;
-            let reasons = [];
+            let patterns = [];
+            
+            // 개별 패턴(1): 가짜 의심 저자명
+            if (citationInfo.author) {
+                const hasCelebName = suspiciousPatterns.celebrityNames.some(p => p.test(citationInfo.author));
+                if (hasCelebName) {
+                    suspicionLevel += 30;
+                    patterns.push("개별 패턴(1)");
+                }
+            }
             
             // 단행본은 학술지 검증 제외
             if (citationInfo.journal && !citationInfo.isBook) {
@@ -3262,48 +3271,41 @@
                     let isFakePattern = suspiciousPatterns.fakeJournals.some(p => p.test(citationInfo.journal));
                     
                     if (isFakePattern) {
+                        // 개별 패턴(3): AI가 자주 생성하는 가짜 학술지명
                         suspicionLevel += 60;
-                        reasons.push("의심스러운 학술지명");
+                        patterns.push("개별 패턴(3)");
                     } else if (/연구|학회지|학보|논총/.test(citationInfo.journal)) {
+                        // 개별 패턴(2): 미등재 학술지명
                         suspicionLevel += 50;
-                        reasons.push("미등재 학술지");
+                        patterns.push("개별 패턴(2)");
                     }
                 }
                 
-                // 권호/페이지 정보 누락 검사
-                const hasVolumeInfo = /\d+\s*\(\s*\d+\s*\)/.test(citationInfo.original) ||  // 26(3)
-                                      /제?\s*\d+\s*권/.test(citationInfo.original) ||       // 제26권
-                                      /Vol\.?\s*\d+/i.test(citationInfo.original) ||        // Vol.26
-                                      /\d+\s*호/.test(citationInfo.original);               // 3호
+                // 개별 패턴(4): 권호/페이지 정보 누락
+                const hasVolumeInfo = /\d+\s*\(\s*\d+\s*\)/.test(citationInfo.original) ||
+                                      /제?\s*\d+\s*권/.test(citationInfo.original) ||
+                                      /Vol\.?\s*\d+/i.test(citationInfo.original) ||
+                                      /\d+\s*호/.test(citationInfo.original);
                 
-                const hasPageInfo = /\d+\s*[-–]\s*\d+/.test(citationInfo.original) ||       // 45-67
-                                    /pp\.?\s*\d+/i.test(citationInfo.original);             // pp.45
+                const hasPageInfo = /\d+\s*[-–]\s*\d+/.test(citationInfo.original) ||
+                                    /pp\.?\s*\d+/i.test(citationInfo.original);
                 
                 if (!hasVolumeInfo && !hasPageInfo) {
                     suspicionLevel += 40;
-                    reasons.push("권호/페이지 정보 없음");
+                    patterns.push("개별 패턴(4)");
                 }
             }
             
+            // 개별 패턴(5): 라운드 페이지 번호
             const hasRoundPage = suspiciousPatterns.roundPageNumbers.some(p => p.test(citationInfo.original));
             if (hasRoundPage) {
                 suspicionLevel += 15;
-                reasons.push("정형화된 페이지 번호");
+                patterns.push("개별 패턴(5)");
             }
             
-            // 일련번호 사용 (개별 문헌)
+            // 일련번호는 전체 패턴으로 처리하므로 개별에서는 점수만 반영
             if (citationInfo.hasSerialNumber) {
                 suspicionLevel += 10;
-                reasons.push("일련번호 형식");
-            }
-            
-            // 유명인 이름
-            if (citationInfo.author) {
-                const hasCelebName = suspiciousPatterns.celebrityNames.some(p => p.test(citationInfo.author));
-                if (hasCelebName) {
-                    suspicionLevel += 30;
-                    reasons.push("저자명 확인 필요");
-                }
             }
             
             if (citationInfo.year) {
@@ -3321,7 +3323,7 @@
             
             return {
                 suspicionLevel,
-                reasons,
+                patterns,
                 isSuspicious: suspicionLevel >= 40,
                 isInvalidJournal: citationInfo.journal && !citationInfo.isBook && !validKoreanJournals.has(citationInfo.journal)
             };
@@ -3336,7 +3338,7 @@
             const recentRatio = recentYears.length / years.length;
             
             if (recentRatio >= 0.8) {
-                return { warning: true, message: `참고문헌의 ${Math.round(recentRatio * 100)}%가 최근 5년 내 출판물입니다.` };
+                return { warning: true, message: "전체 패턴(2)" };
             }
             return null;
         }
@@ -3346,7 +3348,7 @@
             const ratio = withSerial / citations.length;
             
             if (ratio >= 0.5 && withSerial >= 3) {
-                return { warning: true, message: `참고문헌 형식에서 의심스러운 패턴이 발견되었습니다.` };
+                return { warning: true, message: "전체 패턴(1)" };
             }
             return null;
         }
@@ -3378,8 +3380,6 @@
             const serialNumberUsage = analyzeSerialNumberUsage(citationInfos);
             
             const results = [];
-            let suspiciousCount = 0;
-            let invalidJournalCount = 0;
             
             for (let i = 0; i < citationInfos.length; i++) {
                 const progress = ((i + 1) / citationInfos.length) * 100;
@@ -3388,37 +3388,40 @@
                 
                 const analysis = analyzeCitation(citationInfos[i]);
                 
-                if (analysis.isSuspicious) suspiciousCount++;
-                if (analysis.isInvalidJournal) invalidJournalCount++;
-                
                 results.push({ ...citationInfos[i], ...analysis, index: i + 1 });
                 
                 await new Promise(resolve => setTimeout(resolve, 200));
             }
             
-            displayResults(results, suspiciousCount, invalidJournalCount, yearDistribution, serialNumberUsage);
+            // 확인 필요 패턴이 있는 문헌 수 계산
+            const flaggedCount = results.filter(r => r.patterns.length > 0 || r.isSuspicious).length;
+            
+            displayResults(results, flaggedCount, yearDistribution, serialNumberUsage);
             
             document.getElementById('loading').style.display = 'none';
             document.getElementById('results').style.display = 'block';
         }
         
-        function displayResults(results, suspiciousCount, invalidJournalCount, yearDist, serialNum) {
+        function displayResults(results, flaggedCount, yearDist, serialNum) {
             const summaryBox = document.getElementById('summaryBox');
             
-            let additionalWarnings = '';
-            if (yearDist?.warning) additionalWarnings += `<br>⚠️ ${yearDist.message}`;
-            if (serialNum?.warning) additionalWarnings += `<br>⚠️ ${serialNum.message}`;
+            let globalPatterns = [];
+            if (serialNum?.warning) globalPatterns.push(serialNum.message);
+            if (yearDist?.warning) globalPatterns.push(yearDist.message);
             
-            const hasWarnings = suspiciousCount > 0 || invalidJournalCount > 0 || yearDist?.warning || serialNum?.warning;
+            const hasWarnings = flaggedCount > 0 || globalPatterns.length > 0;
             
             if (hasWarnings) {
+                let globalPatternText = globalPatterns.length > 0 
+                    ? `<br>${globalPatterns.join('<br>')}`
+                    : '';
+                
                 summaryBox.innerHTML = `
                     <div class="summary-title">🔍 검증 완료</div>
                     <div class="summary-content">
                         총 <strong>${results.length}개</strong> 문헌 검사 완료.
-                        ${suspiciousCount > 0 ? `<br><span class="suspicious-found">${suspiciousCount}개 문헌 확인 필요.</span>` : ''}
-                        ${invalidJournalCount > 0 && invalidJournalCount !== suspiciousCount ? `<br><span class="suspicious-found">${invalidJournalCount}개 학술지 확인 필요.</span>` : ''}
-                        ${additionalWarnings}
+                        ${flaggedCount > 0 ? `<br><span class="suspicious-found">${flaggedCount}개 문헌 확인 필요.</span>` : ''}
+                        ${globalPatternText}
                         <br><br>아래 검색 링크를 통해 함께 확인해 보세요.
                     </div>
                 `;
@@ -3440,28 +3443,28 @@
                 const resultDiv = document.createElement('div');
                 
                 let className = 'result-item';
-                if (result.isInvalidJournal) className += ' invalid-journal';
-                else if (result.isSuspicious) className += ' suspicious';
+                if (result.patterns.length > 0 || result.isSuspicious) {
+                    className += ' invalid-journal';
+                }
                 
                 resultDiv.className = className;
                 
                 const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(result.searchQuery)}`;
                 const scholarUrl = `https://scholar.google.com/scholar?q=${encodeURIComponent(result.searchQuery)}`;
                 
-                let journalInfo = '';
-                if (result.journal && result.isInvalidJournal) {
-                    journalInfo = `<div class="journal-check-info invalid">⚠️ 확인 필요</div>`;
+                let patternInfo = '';
+                if (result.patterns.length > 0) {
+                    patternInfo = `<div class="journal-check-info invalid">⚠️ ${result.patterns.join(', ')}</div>`;
                 }
                 
                 resultDiv.innerHTML = `
                     <div class="result-number">${result.index}</div>
                     <div class="result-title">${result.original}</div>
-                    ${journalInfo}
+                    ${patternInfo}
                     <div style="margin-top: 12px;">
                         <a href="${googleUrl}" target="_blank" class="search-link">🔍 Google 검색</a>
                         <a href="${scholarUrl}" target="_blank" class="search-link" style="margin-left: 10px;">🎓 Scholar 검색</a>
-                        ${result.isInvalidJournal ? '<span class="status-badge badge-invalid">확인 필요</span>' : 
-                          result.isSuspicious ? '<span class="status-badge badge-suspicious">확인 필요</span>' : ''}
+                        ${result.patterns.length > 0 ? '<span class="status-badge badge-invalid">확인 필요</span>' : ''}
                     </div>
                 `;
                 
